@@ -110,7 +110,7 @@ export class EmbedWikilink implements node {
 		}
 		const [parsed_contents, header_level] = return_data;
 		const ambient_header_offset = data.headers_level_offset;
-		data.headers_level_offset -= header_level - 2; //disregard nesting level of the embedded header.
+		data.headers_level_offset -= header_level - 1; //disregard nesting level of the embedded header.
 		const unrolled_contents = [] as node[];
 		const was_in_thm_env = data.in_thm_env;
 		if (this.attribute !== undefined) {
