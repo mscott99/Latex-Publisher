@@ -28,4 +28,5 @@ export {
 	split_display,
 } from "./display";
 export { notice_and_warn, collected_warnings } from "./utils";
+export type { ExportWarning } from "./utils";
 export type { parsed_longform } from "./parseMarkdown";

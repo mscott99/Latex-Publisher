@@ -69,6 +69,8 @@ export async function label_from_location(
 		settings,
 	);
 	if (resolved_head_label === undefined) {
+		const header_text =
+			typeof header === "string" ? header : header.join("#");
 		notice_and_warn(
 			"could not resolve header at " +
 				address +
@@ -77,6 +79,13 @@ export async function label_from_location(
 				" keeping the header label as-is.\n" +
 				"In note:\n" +
 				file_of_origin.path,
+			{
+				file: file_of_origin.path,
+				// The link target as written in the source note, so external
+				// tools can locate the offending wikilink verbatim.
+				context:
+					header_text === "" ? address : address + "#" + header_text,
+			},
 		);
 		resolved_head_label =
 			typeof header === "string" ? header : header.join(".");
@@ -133,6 +142,13 @@ async function resolve_header_label(
 				"', keeping the header label as-is\n" +
 				"In note:\n" +
 				file_of_origin.path,
+			{
+				file: file_of_origin.path,
+				context:
+					address +
+					"#" +
+					(typeof header === "string" ? header : header.join("#")),
+			},
 		);
 		return header_string;
 	}

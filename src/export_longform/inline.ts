@@ -179,7 +179,7 @@ export class SingleQuotes implements node {
 	static get_regexp(): RegExp {
 		return /(?:'(\S.*?)')/gs;
 	}
-	content: node[];
+	content: node[]; // parsed, so that math and links survive inside quotes.
 	label: string | undefined;
 	static build_from_match(
 		regexmatch: RegExpMatchArray,
@@ -192,7 +192,15 @@ export class SingleQuotes implements node {
 	constructor(content: node[]) {
 		this.content = content;
 	}
-	async unroll(): Promise<node[]> {
+	async unroll(
+		data: metadata_for_unroll,
+		settings: ExportPluginSettings,
+	): Promise<node[]> {
+		const new_content: node[] = [];
+		for (const elt of this.content) {
+			new_content.push(...(await elt.unroll(data, settings)));
+		}
+		this.content = new_content;
 		return [this];
 	}
 	async latex(
@@ -200,10 +208,11 @@ export class SingleQuotes implements node {
 		buffer_offset: number,
 		settings: ExportPluginSettings,
 	) {
-		return (
-			buffer_offset +
-			buffer.write("`" + escape_latex(this.content) + "'", buffer_offset)
-		);
+		let offset = buffer_offset + buffer.write("`", buffer_offset);
+		for (const elt of this.content) {
+			offset = await elt.latex(buffer, offset, settings);
+		}
+		return offset + buffer.write("'", offset);
 	}
 }
 

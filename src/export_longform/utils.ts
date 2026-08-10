@@ -1,12 +1,31 @@
 import { TFile, Notice } from "obsidian";
 
-export const collected_warnings: string[] = [];
+/**
+ * A single export warning. `file` is the vault-relative path of the note the
+ * warning originates from, when known. `context` is a short verbatim snippet
+ * from that note (a wikilink address, header name, label, ...) that lets
+ * external tools locate the offending spot without line numbers.
+ */
+export interface ExportWarning {
+	message: string;
+	file?: string;
+	context?: string;
+}
 
-export function notice_and_warn(message: string) {
-	message = "Warning:\n"+ message
-	collected_warnings.push(message);
-	new Notice(message);
-	console.warn(message);
+export const collected_warnings: ExportWarning[] = [];
+
+export function notice_and_warn(
+	message: string,
+	info?: { file?: string; context?: string },
+) {
+	collected_warnings.push({
+		message,
+		file: info?.file,
+		context: info?.context,
+	});
+	const displayed = "Warning:\n" + message;
+	new Notice(displayed);
+	console.warn(displayed);
 }
 export function escape_latex(input: string) {
 	return input

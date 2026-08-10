@@ -53,7 +53,30 @@ export default class ExportPaperPlugin extends Plugin {
 	async copy_warnings_to_clipboard() {
 		if (!this.settings.copy_errors_to_clipboard) return;
 		if (collected_warnings.length === 0) return;
-		await navigator.clipboard.writeText(collected_warnings.join("\n"));
+		await navigator.clipboard.writeText(
+			collected_warnings.map((w) => "Warning:\n" + w.message).join("\n"),
+		);
+	}
+
+	// Machine-readable report of the last export, for external tools (linters,
+	// editor integrations). Rewritten on every export — an empty `warnings`
+	// array means the export was clean, letting consumers clear stale state.
+	async write_export_report(active_file: TFile, output_file: string | null) {
+		const report = {
+			plugin: this.manifest.id,
+			plugin_version: this.manifest.version,
+			exported_at: new Date().toISOString(),
+			root_note: active_file.path,
+			output_file: output_file,
+			warnings: collected_warnings.slice(),
+		};
+		const report_path = normalizePath(
+			this.manifest.dir + "/export_report.json",
+		);
+		await this.app.vault.adapter.write(
+			report_path,
+			JSON.stringify(report, null, 2),
+		);
 	}
 
 	// External export method with FileSystemAdapter
@@ -233,6 +256,7 @@ export default class ExportPaperPlugin extends Plugin {
 		await this.saveSettings();
 
 		await this.copy_warnings_to_clipboard();
+		await this.write_export_report(active_file, output_path);
 		new Notice(
 			`${export_message}To external folder: ${output_folder_path}`,
 		);
@@ -240,6 +264,7 @@ export default class ExportPaperPlugin extends Plugin {
 	async find_files_and_export(
 		active_file: TFile,
 		settings: ExportPluginSettings,
+		skip_overwrite_check: boolean = false,
 	) {
 		collected_warnings.length = 0;
 		if (this.settings.base_output_folder === "") {
@@ -358,7 +383,7 @@ export default class ExportPaperPlugin extends Plugin {
 			);
 		} else {
 			const out_file_other = out_file;
-			if (this.settings.warn_before_overwrite) {
+			if (this.settings.warn_before_overwrite && !skip_overwrite_check) {
 				new WarningModal(
 					this.app,
 					this,
@@ -455,6 +480,7 @@ export default class ExportPaperPlugin extends Plugin {
 			);
 		}
 		await this.copy_warnings_to_clipboard();
+		await this.write_export_report(active_file, out_file.path);
 		new Notice(
 			partial_message +
 				"To the vault folder inside the vault:\n" +
@@ -468,14 +494,17 @@ export default class ExportPaperPlugin extends Plugin {
 		selection: string,
 		settings: ExportPluginSettings,
 	) {
+		collected_warnings.length = 0;
 		try {
-			return export_selection(
+			const result = await export_selection(
 				this.app.vault.cachedRead.bind(this.app.vault),
 				this.find_file,
 				active_file,
 				selection,
 				settings,
 			);
+			await this.write_export_report(active_file, null);
+			return result;
 		} catch (e) {
 			console.error(e);
 		}
@@ -483,6 +512,26 @@ export default class ExportPaperPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+
+		// Automation hook: obsidian://latex-export?vault=<name>&file=<path>
+		// runs the in-vault export on the given note (resolved like a
+		// wikilink, so a basename works too); without `file`, on the active
+		// note. Meant for external tools (editors, scripts), so it skips the
+		// overwrite confirmation — a background export must not hang on a
+		// modal the user cannot see.
+		this.registerObsidianProtocolHandler("latex-export", async (params) => {
+			const file = params.file
+				? this.find_file(params.file)
+				: (this.app.workspace.getActiveFile() ?? undefined);
+			if (!file) {
+				new Notice(
+					"Latex Exporter: no note found for 'file' URI parameter: " +
+						(params.file ?? "(missing)"),
+				);
+				return;
+			}
+			await this.find_files_and_export(file, this.settings, true);
+		});
 
 		this.addCommand({
 			id: "export-paper",

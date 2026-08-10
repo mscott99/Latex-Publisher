@@ -398,6 +398,7 @@ export async function parse_embed_content(
 				address + "\n" +
 				"In note:\n" +
 				file_of_origin.path,
+			{ file: file_of_origin.path, context: address + "#" + header },
 		);
 		return undefined;
 	}

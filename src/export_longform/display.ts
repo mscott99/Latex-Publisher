@@ -109,6 +109,7 @@ export class DisplayMath implements node {
 					`Environment ${this.explicit_env_name} does not support labels.\n Ignoring label ${this.label}
 In note:
 ` + this.file_of_origin.path,
+					{ file: this.file_of_origin.path, context: this.label },
 				);
 			}
 			if (

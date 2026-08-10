@@ -61,7 +61,10 @@ export class EmbedWikilink implements node {
 					"Content not found: Could not find the content of the plot with image '" +
 					this.content +
 					"'";
-				notice_and_warn(err_msg);
+				notice_and_warn(err_msg, {
+					file: data.current_file.path,
+					context: this.content,
+				});
 				return [
 					new BlankLine(),
 					new Paragraph([new Text(err_msg)]),
@@ -236,7 +239,10 @@ export class CaptionedPlot implements node {
 				"Content not found: Could not find the content of the plot with image '" +
 				this.address +
 				"'";
-			notice_and_warn(err_msg);
+			notice_and_warn(err_msg, {
+				file: data.current_file.path,
+				context: this.address,
+			});
 			return [
 				new BlankLine(),
 				new Paragraph([new Text(err_msg)]),
@@ -315,7 +321,10 @@ export class Plot implements node {
 				"![[plot.png|my caption]]\n" +
 				"In note:\n" +
 				this.file_of_origin.path;
-			notice_and_warn(warning);
+			notice_and_warn(warning, {
+				file: this.file_of_origin.path,
+				context: this.image.name,
+			});
 			buffer_offset += buffer.write(
 				"\\caption{" + caption_text + "\\label{" + this.label + "}}\n",
 				buffer_offset,
@@ -603,6 +612,10 @@ export class UnrolledWikilink implements node {
 					"' points to no file.\nWikilink is in file: '" +
 					this.unroll_data.current_file.path +
 					"'",
+				{
+					file: this.unroll_data.current_file.path,
+					context: this.address,
+				},
 			);
 			return (
 				buffer_offset +
@@ -641,6 +654,10 @@ export class UnrolledWikilink implements node {
 						"' is referenced but was not embedded.\n" +
 						"In note:\n" +
 						this.unroll_data.current_file.path,
+					{
+						file: this.unroll_data.current_file.path,
+						context: this.address,
+					},
 				);
 				return (
 					buffer_offset +
@@ -795,6 +812,7 @@ export class Citation implements node {
 		) {
 			notice_and_warn(
 				"Invalid citation type: " + type + ". Reverting to default.",
+				{ context: type },
 			);
 			this.type = undefined;
 		} else {
