@@ -15,6 +15,18 @@ Another \\emph{emph} \\textbf{strong}
 `);
 	});
 
+	test("inline content within quotes", async () => {
+		const result = await get_latex_file_contents(
+			"inline_quotes",
+			DEFAULT_SETTINGS,
+		);
+		expect(result)
+			.toEqual(`an \`\`oriented map $\\psi$ positive on $K$"
+\`\`a quote with 50\\% and \\emph{emph}"
+a \`single 50\\% quote'
+`);
+	});
+
 	test("latex escaping", async () => {
 		const result = await get_latex_file_contents(
 			"latex_escaping",

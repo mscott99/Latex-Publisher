@@ -52,10 +52,61 @@ To use citations, place a bib file named `bibliography.bib` in the root of your 
 Before making manual changes to the exported LaTeX file, be careful to first copy the newly-generated folder to a different location, because under some settings (not the default), re-running the export command from the same note will overwrite the exported LaTeX file (surrounding files, like the preamble or bib file, will not be overwritten unless specified in settings). This overwriting setting is meant to facilitate editing the obsidian files while seeing the updated LaTeX output quickly. Additional settings allow overwriting figure files (`Files` folder) and the header file (`header.tex`) during export.
 ### `Latex Exporter:Export selection to clipboard`
 This command exports the selected portion of the current note to the clipboard. To use this command, navigate to the note of interest, go to the editing view (it does not work in reading view), select a portion of the note by dragging your cursor, and while the text is selected run `Cmd+P` and select the command `Latex Exporter:Export selection to clipboard`. Be warned that the LaTeX exported using this method will only compile well if pasted into a document that imports the relevant LaTeX packages.
+### Triggering an export from outside Obsidian
+The plugin registers the URI `obsidian://latex-export`, so external tools
+(editors, scripts) can trigger the in-vault export without touching the
+Obsidian UI:
+
+```
+obsidian://latex-export?vault=<vault name>&file=<path or name of note>
+```
+
+The `file` parameter is resolved like a wikilink, so a bare note name works
+as well as a vault-relative path; if omitted, the currently active note is
+exported. Because this is meant for automation, it skips the
+overwrite-confirmation dialog. On macOS, for example:
+
+```sh
+open -g "obsidian://latex-export?vault=myVault&file=My%20Longform%20Note"
+```
+
+(`-g` keeps Obsidian in the background.) Combined with the machine-readable
+export report described below, this allows a fully external export loop.
+
 ### Warnings
 Heed the warnings! They are (usually) not bugs, but an important part of the plugin. They give you helpful feedback as to what should be fixed within your own notes to ensure a good export. For example, you may have a wikilink (which is trying to become a reference) addressed to a header which happens to not be visible from the longform note. The plugin will detect some such structural issues and tell you about it.
 
 The warnings appear as notices, but these go away quickly. To see them longer, you can find them in the developer console that you can access with `Ctrl + Shift + I` on Windows/Linux, or `Cmd + Option + I` on Mac.
+
+#### Machine-readable export report
+Every export also writes a JSON report to the plugin's folder, at
+`.obsidian/plugins/latex-exporter/export_report.json`, for use by external
+tools (editor integrations, linters, scripts). The report is rewritten on
+each export; an empty `warnings` array means the export was clean, so tools
+can use it to clear previously reported issues.
+
+```json
+{
+  "plugin": "latex-exporter",
+  "plugin_version": "0.1.12",
+  "exported_at": "2026-07-24T20:00:00.000Z",
+  "root_note": "path/of/longform note.md",
+  "output_file": "exports/longform_note/longform note_output.tex",
+  "warnings": [
+    {
+      "message": "the human-readable warning text",
+      "file": "path/of/originating note.md",
+      "context": "wikilink address, header name, or label the warning is about"
+    }
+  ]
+}
+```
+
+`file` is the vault-relative path of the note the warning originates from,
+and `context` is a short verbatim snippet from that note that can be searched
+for to locate the offending spot; both are optional (absent when unknown).
+`output_file` is vault-relative for in-vault exports, an absolute path for
+external exports, and `null` for selection exports.
 
 Some other mistakes go undetected in the export phase, so it is a good idea to also look at diagnostic warnings from latex editors that appear within the exported latex documents. These may tell you about other mistakes in your notes.
 
